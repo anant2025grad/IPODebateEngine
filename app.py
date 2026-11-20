@@ -7,20 +7,10 @@ with open("assets/Anthropic, PBC - 424(b)(4).html", "rb") as file:
 
 
 tables = soup.find_all("table")
-target_index = 104
-"""
-for i, table in enumerate(tables, start=1):
+target_index = 102
 
-    try:
-            df = pd.read_html(StringIO(str(table)), flavor="lxml")[0]
-
-            print(f"-- Table {i} --")
-            print(df.head(2).to_string(index=False))
-            print()
-    except Exception as e:
-        print(f"Skipping table {i}: {e}")
-"""
 df = pd.read_html(StringIO(str(tables[target_index])), flavor='lxml')[0]
+"""
 df = df.iloc[4:].copy()
 df = df.iloc[:, [0, 1, 3, 5, 7, 9]]
 df.columns = [
@@ -32,6 +22,13 @@ df.columns = [
     "9M2026"
 ]
 df.dropna(axis=0, how='all')
+
+# Remove rows without a metric name
+df = df.dropna(subset=["Metric"])
+
+# Reset the row index
+df = df.reset_index(drop=True)
+
 
 def clean_financial_value(value):
     if pd.isna(value):
@@ -58,6 +55,7 @@ financial_columns = df.columns[1:]
 
 for col in financial_columns:
     df[col] = df[col].apply(clean_financial_value)
+"""
 print()
 print(f"-- Table {target_index + 1} --")
 print(df.to_string(index=False))
