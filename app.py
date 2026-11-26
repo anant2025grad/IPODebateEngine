@@ -1,66 +1,40 @@
-from io import StringIO
-from bs4 import BeautifulSoup
-import pandas as pd
-
-with open("assets/Anthropic, PBC - 424(b)(4).html", "rb") as file:
-    soup = BeautifulSoup(file, "html.parser")
-
-
-tables = soup.find_all("table")
-target_index = 102
-
-df = pd.read_html(StringIO(str(tables[target_index])), flavor='lxml')[0]
-
-df = df.iloc[4:].copy()
-df = df.iloc[:, [0, 1, 3, 5]]
-df.columns = [
-    "Metric",
-    "FY2024",
-    "FY2025",
-    "Sep2026",
-
-]
-df.dropna(how='all')
-
-# Remove rows without a metric name
-df = df.dropna(subset=["Metric"])
-
-# Reset the row index
-df = df.reset_index(drop=True)
+from parser import (
+    extract_financial_statements,
+    validate_balance_sheet,
+    validate_cash_flow
+)
 
 
-def clean_financial_value(value):
-    if pd.isna(value):
-        return None
+def main():
+    file_path = "assets/Anthropic, PBC - 424(b)(4).html"
 
-    value = str(value).strip()
+    income_statement, balance_sheet, cash_flow = (
+        extract_financial_statements(file_path)
+    )
 
-    if value in ["", "—", "–", "-"]:
-        return None
-    negative = "(" in value and ")" in value
+    print("\n-- Consolidated Income Statement --")
+    print(income_statement.to_string(index=False))
 
-    value = value.replace("$", "")
-    value = value.replace(",", "")
-    value = value.replace("(", "")
-    value = value.replace(")", "")
+    print("\n-- Consolidated Balance Sheet --")
+    print(balance_sheet.to_string(index=False))
 
-    try:
-        number = float(value)
-        return -number if negative else number
-    except ValueError:
-        return None
+    print("\n-- Consolidated Cash Flow Statement --")
+    print(cash_flow.to_string(index=False))
 
-def extract_financial_balance_sheet(table):
-    df = pd.read_html(StringIO((table), flavor='lxml'))[0]
-    df = df.iloc[4:, [0, 1, 3, 5]].copy()
+    print("\n-- Balance Sheet Reconciliation --")
 
-    df.columns
+    for period, difference in validate_balance_sheet(
+        balance_sheet
+    ).items():
+        print(f"{period}: {difference:,.2f}")
 
-financial_columns = df.columns[1:]
+    print("\n-- Cash Flow Reconciliation --")
 
-for col in financial_columns:
-    df[col] = df[col].apply(clean_financial_value)
+    for period, difference in validate_cash_flow(
+        cash_flow
+    ).items():
+        print(f"{period}: {difference:,.2f}")
 
-print()
-print(f"-- Table {target_index + 1} --")
-print(df.to_string(index=False))
+
+if __name__ == "__main__":
+    main()
