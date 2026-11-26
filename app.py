@@ -3,7 +3,7 @@ from parser import (
     validate_balance_sheet,
     validate_cash_flow
 )
-
+from analysis import calculate_growth
 
 def main():
     file_path = "assets/Anthropic, PBC - 424(b)(4).html"
@@ -35,6 +35,10 @@ def main():
     ).items():
         print(f"{period}: {difference:,.2f}")
 
+    growth_metrics = calculate_growth(income_statement)
+
+    print("\n-- Growth Metrics --")
+    print(growth_metrics)
 
 if __name__ == "__main__":
     main()
